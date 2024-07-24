@@ -27,19 +27,18 @@ Before you begin, you will need to:
 When running the Pipelines SDK inside a multi-user Kubeflow cluster, a [ServiceAccount token volume](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) 
 can be mounted to the Pod, the Kubeflow Pipelines SDK can use this token to authenticate itself with the Kubeflow Pipelines API.
 
-The following code creates a `kfp.Client()` using a ServiceAccount token for authentication.
+The following code use Pipelines SDK v2, and in jupyter notebook, creates a `kfp.Client()` using a ServiceAccount token for authentication.
 
 ```python
 import kfp
 
-# the namespace in which you deployed Kubeflow Pipelines
+# the namespace in which you deployed Kubeflow Pipelines,user namespace
 namespace = "kubeflow"
 
 # the KF_PIPELINES_SA_TOKEN_PATH environment variable is used when no `path` is set
 # the default KF_PIPELINES_SA_TOKEN_PATH is /var/run/secrets/kubeflow/pipelines/token
-credentials = kfp.auth.ServiceAccountTokenVolumeCredentials(path=None)
 
-client = kfp.Client(host=f"http://ml-pipeline-ui.{namespace}", credentials=credentials)
+client = kfp.Client(host="http://localhost:3000", namespace=f"{namespace}")
 
 print(client.list_experiments())
 ```
@@ -117,15 +116,15 @@ spec:
 
 The Kubeflow Pipelines API respects Kubernetes RBAC, and will check RoleBindings assigned to the ServiceAccount before allowing it to take Pipelines API actions.
 
-For example, this RoleBinding allows Pods with the `default-editor` ServiceAccount in `namespace-2` to manage Kubeflow Pipelines in `namespace-1`:
+For example, this RoleBinding allows Pods with the `default-editor` ServiceAccount in `user-namespace` to manage Kubeflow Pipelines in `kubeflow`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: allow-namespace-2-kubeflow-edit
-  ## this RoleBinding is in `namespace-1`, because it grants access to `namespace-1`
-  namespace: namespace-1
+  ## this RoleBinding is in `kubeflow`, because it grants access to `kubeflow`
+  namespace: kubeflow
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -133,8 +132,8 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: default-editor
-    ## the ServiceAccount lives in `namespace-2`
-    namespace: namespace-2
+    ## the ServiceAccount lives in `user-namespace`
+    namespace: <user-namespace>
 ```
 
 {{% alert title="Tip" color="info" %}}
